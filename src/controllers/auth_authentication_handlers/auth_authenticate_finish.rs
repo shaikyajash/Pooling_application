@@ -1,4 +1,6 @@
 use axum::{Json, extract::State, http::StatusCode};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -18,12 +20,24 @@ pub struct AuthenticateFinishRequest {
 pub struct AuthenticateFinishResponse {
     pub message: String,
     pub user_name: String,
+    pub token: String,
 }
+
+
+#[derive(Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,      // username
+    pub exp: usize,       // expiration timestamp
+    pub iat: usize,       // issued at
+}
+
+
+
 
 pub async fn authenticate_finish(
     State(state): State<AppState>,
     Json(req): Json<AuthenticateFinishRequest>,
-) -> Result<Json<AuthenticateFinishResponse>, (StatusCode, String)> {
+) -> Result<(StatusCode, Json<AuthenticateFinishResponse>), (StatusCode, String)> {
     // Validate authentication_id
     let authentication_id = req.authentication_id.trim();
     
@@ -88,20 +102,56 @@ pub async fn authenticate_finish(
     match auth_helpers::update_passkey_counter(&user_name, &auth_result, &state).await {
         Ok(_) => {
             println!("✅ Authentication successful for user: {}", user_name);
-            Ok(Json(AuthenticateFinishResponse {
-                message: "Login successful".to_string(),
-                user_name,
-            }))
         }
         Err(e) => {
             eprintln!(" Error updating passkey counter: {}", e);
-            Ok(Json(AuthenticateFinishResponse {
-                message: "Login successful (counter update failed)".to_string(),
-                user_name,
-            }))
         }
     }
 
+    // Generating JWT token upon successful authentication
+    let claims = Claims{
+        sub: user_name.clone(),
+        exp:(Utc::now() + Duration::hours(24)).timestamp() as usize,
+        iat: Utc::now().timestamp() as usize,
+    };
+
+
+
+    //accessing the secret key from environment variable
+    let jwt_secret = match std::env::var("JWT_SECRET"){
+        Ok(secret) => secret,
+        Err(e) => {
+            eprintln!("❌ JWT_SECRET not set in environment: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Server configuration error".to_string(),
+            ));
+        }
+    };
+
+
+    //imp: &secret would share it as -> &String
+    // but we want &[u8] so we use .as_ref()
+
+    let token = match encode(&Header::default(), &claims, &EncodingKey::from_secret(jwt_secret.as_ref())) { 
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("❌ Error generating JWT token: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error generating authentication token".to_string(),
+            ));
+        }
+    };
+
+Ok((
+    StatusCode::CREATED,
+    Json(AuthenticateFinishResponse {
+        message: "Login successful".to_string(),
+        user_name,
+        token,
+    }),
+))
 
 
 }

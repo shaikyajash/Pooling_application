@@ -1,8 +1,9 @@
-use axum::{Router, routing::get};
+use axum::{Router,routing::get};
 
-use crate::controllers::health::health_get;
+use crate::{controllers::health::health_get, models::local_store::AppState};
 
-pub fn api_routes() -> Router {
-    Router::new().route("/health", get(health_get))
-    // .route("/health", health_post)
+
+pub fn health_check_routes() -> Router<AppState>{
+    Router::new()
+        .route("/", get(health_get))
 }

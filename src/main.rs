@@ -1,8 +1,9 @@
 mod controllers;
+mod middleware;
 mod models;
 mod routes;
 mod utils;
-use routes::health::api_routes;
+use routes::api::api_routes;
 
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
@@ -11,7 +12,7 @@ use webauthn_rs::WebauthnBuilder;
 
 use crate::{
     models::local_store::AppState,
-    routes::auth::auth_routes,
+    routes::{auth::auth_routes, health::health_check_routes},
     utils::{connect_to_db::connect_to_db, setup_tables::make_tables_if_not_exists},
 };
 
@@ -66,13 +67,10 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let app = Router::new()
+    let app = Router::new().nest("/health", health_check_routes())
         .nest("/api", api_routes())
-        .merge(
-            Router::new()
-                .nest("/auth", auth_routes())
-                .with_state(app_state),
-        )
+        .nest("/auth", auth_routes())
+        .with_state(app_state)
         .layer(cors);
 
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
