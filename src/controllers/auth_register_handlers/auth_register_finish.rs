@@ -32,18 +32,23 @@ pub async fn auth_register_finish(
     }
 
     // Retrieve the registration state and username using the registration_id
-    let (registration_state, username) = {
-        let mut map = state.store.registration_state.write().await;
-
-        match map.remove(registration_id) {
-            Some((state, uname)) => (state, uname),
-            None => {
-                eprintln!("❌ Registration state not found");
-                return Err((
-                    StatusCode::BAD_REQUEST,
-                    "Registration state not found or expired".to_string(),
-                ));
-            }
+    let (registration_state, username) = match state
+        .store
+        .registration_state
+        .get(registration_id)
+        .await
+    {
+        Some(data) => {
+            // Remove from cache after retrieval (one-time use)
+            state.store.registration_state.invalidate(registration_id).await;
+            data
+        }
+        None => {
+            eprintln!("❌ Registration state not found or expired");
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Registration state not found or expired".to_string(),
+            ));
         }
     };
 

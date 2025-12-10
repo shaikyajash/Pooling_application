@@ -65,13 +65,12 @@ pub async fn auth_authenticate_start(
     // Generate unique authentication ID
     let auth_id = Uuid::new_v4().to_string();
 
-    // Store authentication state
+    // Store authentication state (automatically expires in 5 minutes)
     state
         .store
         .authentication_states
-        .write()
-        .await
-        .insert(auth_id.clone(), (auth_state, user_name));
+        .insert(auth_id.clone(), (auth_state, user_name))
+        .await;
 
     // Serialize the challenge response
     let public_key_options = match serde_json::to_value(&challenge_response) {
