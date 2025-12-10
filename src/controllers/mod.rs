@@ -1,2 +1,5 @@
 pub mod health;
-pub mod auth_register;
+pub mod auth_register_handlers;
+
+pub mod auth_helpers;
+pub mod auth_authentication_handlers;
