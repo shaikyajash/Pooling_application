@@ -4,17 +4,17 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct ProtectedResponse {
     pub message: String,
-    pub username: String,
+    pub user_id: String,
 }
 
 /// Test endpoint to verify authentication works
 pub async fn protected_test(
-    Extension(username): Extension<String>,  // Extracted from JWT by middleware
+    Extension(user_id): Extension<String>,  // Extracted from JWT by middleware
 ) -> Result<Json<ProtectedResponse>, (StatusCode, String)> {
-    println!("✅ Protected route accessed by: {}", username);
+    println!("✅ Protected route accessed by: {}", user_id);
     
     Ok(Json(ProtectedResponse {
         message: "You have successfully accessed a protected route!".to_string(),
-        username,
+        user_id,
     }))
 }

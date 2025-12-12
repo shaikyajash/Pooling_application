@@ -1,10 +1,11 @@
 use axum::{
-    extract::{Request, State},
+    extract::{Request},
     http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
 use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
+use sqlx::types::Uuid;
 
 use crate::{controllers::auth_authentication_handlers::auth_authenticate_finish::Claims};
 
@@ -58,4 +59,33 @@ pub async fn require_authentication(
     Ok(next.run(req).await)
 
 
+}
+
+
+
+// Optional middleware for routes that work with or without authentication
+pub async fn optional_authentication(
+    mut req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Try to extract token, but don't fail if it's missing
+    if let Some(auth_header) = req.headers().get(header::AUTHORIZATION) {
+        if let Ok(auth_str) = auth_header.to_str() {
+            if let Some(token) = auth_str.strip_prefix("Bearer ") {
+                if let Ok(jwt_secret) = std::env::var("JWT_SECRET") {
+                    let decoding_key = DecodingKey::from_secret(jwt_secret.as_ref());
+                    
+                    if let Ok(token_data) = decode::<Claims>(token, &decoding_key, &Validation::default()) {
+                        if let Ok(user_id) = Uuid::parse_str(&token_data.claims.sub) {
+                            // Store user_id if valid token exists
+                            req.extensions_mut().insert(user_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Continue regardless of authentication status
+    Ok(next.run(req).await)
 }

@@ -139,7 +139,7 @@ pub async fn update_passkey_counter(
     user_name: &str,
     auth_result:  &AuthenticationResult,
     state: &AppState,
-) -> Result<(), AppError> {
+) -> Result<(Uuid, String), AppError> {
 
     // lets get the pass by using the upper helper function 
     let mut passkey = get_user_passkeys(user_name, state).await?;
@@ -148,28 +148,30 @@ pub async fn update_passkey_counter(
     //lets update  the passkey counter now
     passkey.update_credential(auth_result);
 
-    // Now we need to save the updated passkey back to the database
+    // Now we need to save the updated passkey back to the database and return user_id
     let updated_passkey_binary = serde_json::to_vec(&passkey).map_err(|e| {
         eprintln!("Error serializing updated passkey:{}", e);
         AppError::SerializationError(e.to_string())
     })?;
 
-    sqlx::query(
+    let user = sqlx::query!(
         r#"
         UPDATE users
         SET passkey = $1
         WHERE username = $2
+        RETURNING id, username
         "#,
+        updated_passkey_binary,
+        user_name
     )
-    .bind(updated_passkey_binary)
-    .bind(user_name)
-    .execute(&state.db)
+    .fetch_one(&state.db)
     .await
     .map_err(|e| {
         eprintln!("Database error updating passkey counter: {}", e);
         AppError::DatabaseError(e.to_string())
     })?;
-    println!("Updated passkey counter for user: {}", user_name);
-    Ok(())
+    
+    println!("Updated passkey counter for user: {} (ID: {})", user.username, user.id);
+    Ok((user.id, user.username))
 
 }

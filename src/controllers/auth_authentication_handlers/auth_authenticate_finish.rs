@@ -20,13 +20,15 @@ pub struct AuthenticateFinishRequest {
 pub struct AuthenticateFinishResponse {
     pub message: String,
     pub user_name: String,
+    pub user_id: String,
     pub token: String,
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Claims {
-    pub sub: String,      // username
+    pub sub: String,      // user_id (UUID as string)
+    pub username:String, // username
     pub exp: usize,       // expiration timestamp
     pub iat: usize,       // issued at
 }
@@ -99,18 +101,24 @@ pub async fn authenticate_finish(
         }
     };
 
-    match auth_helpers::update_passkey_counter(&user_name, &auth_result, &state).await {
-        Ok(_) => {
-            println!("✅ Authentication successful for user: {}", user_name);
+    let (user_id, username) = match auth_helpers::update_passkey_counter(&user_name, &auth_result, &state).await {
+        Ok((id, name)) => {
+            println!("✅ Authentication successful for user: {} (ID: {})", name, id);
+            (id, name)
         }
         Err(e) => {
             eprintln!(" Error updating passkey counter: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error updating authentication data".to_string(),
+            ));
         }
-    }
+    };
 
-    // Generating JWT token upon successful authentication
+    // Generating JWT token with user_id as subject
     let claims = Claims{
-        sub: user_name.clone(),
+        sub: user_id.to_string(),  // User ID as subject (standard practice)
+        username: username.clone(),
         exp:(Utc::now() + Duration::hours(24)).timestamp() as usize,
         iat: Utc::now().timestamp() as usize,
     };
@@ -148,7 +156,8 @@ Ok((
     StatusCode::CREATED,
     Json(AuthenticateFinishResponse {
         message: "Login successful".to_string(),
-        user_name,
+        user_name: username,
+        user_id: user_id.to_string(),
         token,
     }),
 ))

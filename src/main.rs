@@ -12,7 +12,7 @@ use webauthn_rs::WebauthnBuilder;
 
 use crate::{
     models::local_store::AppState,
-    routes::{auth::auth_routes, health::health_check_routes},
+    routes::{auth::auth_routes, health::health_check_routes, polls::polls_routes},
     utils::{connect_to_db::connect_to_db, setup_tables::make_tables_if_not_exists},
 };
 
@@ -26,8 +26,33 @@ async fn main() {
 
     //Server initializing Code below
 
-    let rp_id = "localhost";
-    let origin = Url::parse("http://localhost:5500").expect("Failed to parse origin");
+    // let rp_id = "localhost";
+    // let origin = Url::parse("http://localhost:3000").expect("Failed to parse origin");
+
+    // Read RP_ID and ORIGIN from environment (fallback to sensible defaults)
+    let rp_id = match std::env::var("RP_ID") {
+        Ok(val) => val,
+        Err(_) => {
+            eprintln!("⚠️ RP_ID not set in environment - defaulting to 'localhost'");
+            "localhost".to_string()
+        }
+    };
+
+    let origin_str = match std::env::var("ORIGIN") {
+        Ok(val) => val,
+        Err(_) => {
+            eprintln!("⚠️ ORIGIN not set in environment - defaulting to 'http://localhost:3000'");
+            "http://localhost:3000".to_string()
+        }
+    };
+
+    let origin = match Url::parse(&origin_str) {
+        Ok(url) => url,
+        Err(e) => {
+            eprintln!("❌ Failed to parse ORIGIN '{}': {}", origin_str, e);
+            return;
+        }
+    };
 
     let webauth = match WebauthnBuilder::new(&rp_id, &origin) {
         Ok(builder) => match builder.rp_name("PollingApp").build() {
@@ -67,9 +92,11 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let app = Router::new().nest("/health", health_check_routes())
+    let app = Router::new()
+        .nest("/health", health_check_routes())
         .nest("/api", api_routes())
         .nest("/auth", auth_routes())
+        .nest("/polls", polls_routes())
         .with_state(app_state)
         .layer(cors);
 
@@ -90,5 +117,4 @@ async fn main() {
             return;
         }
     };
-
 }

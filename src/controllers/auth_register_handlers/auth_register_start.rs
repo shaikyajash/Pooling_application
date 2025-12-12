@@ -106,7 +106,7 @@ pub async fn auth_register_function(
 
         // Match on AppError enum
         return match e {
-            AppError::UserAlreadyHasPasskey => Err((StatusCode::CONFLICT, e.message())),
+            AppError::UserAlreadyHasPasskey => Err((StatusCode::CONFLICT,e.message())),
 
             // Handle all other errors (DatabaseError, SerializationError, etc.)
             _ => Err((e.status_code(), e.message())),

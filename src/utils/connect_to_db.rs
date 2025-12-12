@@ -13,7 +13,7 @@ pub async fn connect_to_db() -> Result<PgPool, sqlx::Error> {
     };
 
     let pool = match PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(10)
         .connect(&database_url)
         .await
     {
