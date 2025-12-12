@@ -2,7 +2,7 @@ use axum::{Extension, Json, extract::{Path, State}, http::StatusCode};
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::create_poll_helpers, models::{local_store::AppState, polls::Poll}};
+use crate::{controllers::poll_handlers::poll_helpers, models::{local_store::AppState, polls::Poll}};
 
 
 #[derive(Debug, Serialize)]
@@ -43,7 +43,7 @@ pub async fn reset_poll_handler(
     };
 
     // Check if poll exists
-    let poll = match create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Poll not found: {}", e);
@@ -72,7 +72,7 @@ pub async fn reset_poll_handler(
 
 
     // Reset the poll votes
-    if let Err(e) = create_poll_helpers::reset_poll_votes(&poll_uuid, &state).await {
+    if let Err(e) = poll_helpers::reset_poll_votes(&poll_uuid, &state).await {
         eprintln!("❌ Error resetting poll votes: {}", e);
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -81,7 +81,7 @@ pub async fn reset_poll_handler(
     }
 
     // Get updated poll data
-    let updated_poll = match create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let updated_poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Error fetching updated poll: {}", e);

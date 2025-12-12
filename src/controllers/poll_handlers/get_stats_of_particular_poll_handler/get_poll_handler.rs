@@ -2,7 +2,7 @@ use axum::{Extension, Json, extract::{Path, State}, http::StatusCode};
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::create_poll_helpers, models::{local_store::AppState, polls::{Poll, PollOptionWithPercentage}}};
+use crate::{controllers::poll_handlers::poll_helpers, models::{local_store::AppState, polls::{Poll, PollOptionWithPercentage}}};
 
 
 
@@ -35,7 +35,7 @@ pub async fn get_poll(
     };
 
         // Check if poll exists
-    let poll = match create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Poll not found: {}", e);
@@ -47,7 +47,7 @@ pub async fn get_poll(
     };
 
      // Get poll options
-    let options = match create_poll_helpers::get_poll_options(&poll_uuid, &state).await {
+    let options = match poll_helpers::get_poll_options(&poll_uuid, &state).await {
         Ok(options) => options,
         Err(e) => {
             eprintln!("❌ Error fetching poll options: {}", e);
@@ -82,7 +82,7 @@ let mut options_with_percentage = Vec::with_capacity(options.len());
       // Check if user voted (if authenticated)
     let user_voted_option_id = if let Some(Extension(user_uuid)) = user_id {
         println!("✅ User authenticated: {}", user_uuid);
-        match create_poll_helpers::get_user_vote(&poll_uuid, &user_uuid, &state).await {
+        match poll_helpers::get_user_vote(&poll_uuid, &user_uuid, &state).await {
             Ok(vote) => {
                 println!("✅ User vote found: {:?}", vote);
                 vote

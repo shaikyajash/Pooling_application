@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::{ create_poll_helpers}, models::{
+use crate::{controllers::poll_handlers::{ poll_helpers}, models::{
     local_store::AppState,
     polls::{Poll, PollOption},
 }};
@@ -67,7 +67,7 @@ pub async fn vote_handler(
 
 
     // Check if poll exists
-    let poll = match create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Poll not found: {}", e);
@@ -87,7 +87,7 @@ pub async fn vote_handler(
         ));
     }
 
-    match create_poll_helpers::get_user_vote(&poll_uuid, &user_uuid, &state).await {
+    match poll_helpers::get_user_vote(&poll_uuid, &user_uuid, &state).await {
         Ok(Some(_)) => {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -109,7 +109,7 @@ pub async fn vote_handler(
 
 
   // Cast the vote and get the voted option
-    let voted_option = match create_poll_helpers::cast_vote(&poll_uuid, &user_uuid, &option_uuid, &state).await {
+    let voted_option = match poll_helpers::cast_vote(&poll_uuid, &user_uuid, &option_uuid, &state).await {
         Ok(option) => option,
         Err(e) => {
             eprintln!("❌ Error casting vote: {}", e);
@@ -124,7 +124,7 @@ pub async fn vote_handler(
 
 
     // Get updated poll data
-    let updated_poll = match create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let updated_poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Error fetching updated poll: {}", e);

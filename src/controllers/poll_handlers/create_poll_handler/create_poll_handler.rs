@@ -2,10 +2,13 @@ use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::create_poll_helpers, models::{
-    local_store::AppState,
-    polls::{Poll, PollOption},
-}};
+use crate::{
+    controllers::poll_handlers::create_poll_handler::create_poll_helpers,
+    models::{
+        local_store::AppState,
+        polls::{Poll, PollOption},
+    },
+};
 
 #[derive(Debug, Deserialize)]
 pub struct CreatePollRequest {
@@ -25,9 +28,6 @@ pub async fn create_poll_handler(
     Extension(user_id): Extension<String>,
     Json(payload): Json<CreatePollRequest>,
 ) -> Result<(StatusCode, Json<CreatePollResponse>), (StatusCode, String)> {
-
-
-
     // Parse user_id from String to Uuid
     let creator_id = match Uuid::parse_str(&user_id) {
         Ok(id) => id,
@@ -36,7 +36,6 @@ pub async fn create_poll_handler(
             return Err((StatusCode::BAD_REQUEST, "Invalid user ID".to_string()));
         }
     };
-
 
     if let Err(e) = validate_poll_request(&payload.title, &payload.options) {
         eprintln!("❌ Poll validation failed: {}", e);
@@ -59,7 +58,9 @@ pub async fn create_poll_handler(
 
     // Insert the poll using helper
     let poll_id = Uuid::new_v4();
-    let poll = match create_poll_helpers::insert_poll(&mut tx, poll_id, &payload.title, creator_id).await {
+    let poll = match create_poll_helpers::insert_poll(&mut tx, poll_id, &payload.title, creator_id)
+        .await
+    {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Error creating poll: {}", e);
@@ -71,16 +72,17 @@ pub async fn create_poll_handler(
     };
 
     // Insert poll options using helper
-    let options = match create_poll_helpers::insert_poll_options(&mut tx, poll_id, &payload.options).await {
-        Ok(options) => options,
-        Err(e) => {
-            eprintln!("❌ Error creating poll options: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Error creating poll options".to_string(),
-            ));
-        }
-    };
+    let options =
+        match create_poll_helpers::insert_poll_options(&mut tx, poll_id, &payload.options).await {
+            Ok(options) => options,
+            Err(e) => {
+                eprintln!("❌ Error creating poll options: {}", e);
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Error creating poll options".to_string(),
+                ));
+            }
+        };
 
     // Commit transaction
     if let Err(e) = tx.commit().await {
@@ -91,7 +93,10 @@ pub async fn create_poll_handler(
         ));
     }
 
-    println!("✅ Poll '{}' created successfully by user {}", poll.title, creator_id);
+    println!(
+        "✅ Poll '{}' created successfully by user {}",
+        poll.title, creator_id
+    );
 
     Ok((
         StatusCode::CREATED,
@@ -102,10 +107,6 @@ pub async fn create_poll_handler(
         }),
     ))
 }
-
-
-
-
 
 /// Validate poll creation request
 pub fn validate_poll_request(title: &str, options: &[String]) -> Result<(), String> {

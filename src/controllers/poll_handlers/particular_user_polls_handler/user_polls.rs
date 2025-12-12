@@ -1,9 +1,15 @@
-use axum::{Json, extract::{Path, State}, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::user_polls::user_polls_helper, models::local_store::AppState};
-
+use crate::{
+    controllers::poll_handlers::particular_user_polls_handler::{user_polls_helper},
+    models::local_store::AppState,
+};
 
 #[derive(Debug, Serialize)]
 pub struct UserPollSummary {
@@ -39,7 +45,10 @@ pub async fn user_polls(
         Ok(p) => p,
         Err(e) => {
             eprintln!("❌ Error fetching polls for user {}: {}", user_uuid, e);
-            return Err((StatusCode::INTERNAL_SERVER_ERROR, "Error fetching polls".to_string()));
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error fetching polls".to_string(),
+            ));
         }
     };
 
@@ -56,8 +65,11 @@ pub async fn user_polls(
         });
     }
 
-    Ok((StatusCode::OK, Json(UserPollsResponse {
-        user_id: user_uuid,
-        polls: summaries,
-    })))
+    Ok((
+        StatusCode::OK,
+        Json(UserPollsResponse {
+            user_id: user_uuid,
+            polls: summaries,
+        }),
+    ))
 }

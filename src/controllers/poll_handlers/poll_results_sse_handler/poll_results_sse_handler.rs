@@ -1,20 +1,17 @@
 use axum::{
     extract::{Path, State},
-    response::{
-        sse::{Event, KeepAlive},
-        Sse,
-    },
     http::StatusCode,
+    response::{
+        Sse,
+        sse::{Event, KeepAlive},
+    },
 };
 use serde::Serialize;
 use sqlx::types::Uuid;
 use std::convert::Infallible;
 use tokio::time::{Duration, interval};
 
-use crate::{
-    controllers::poll_handlers::create_poll_helpers,
-    models::local_store::AppState,
-};
+use crate::{controllers::poll_handlers::poll_helpers, models::local_store::AppState};
 
 #[derive(Debug, Serialize, Clone)]
 pub struct PollOptionResult {
@@ -37,25 +34,18 @@ pub async fn poll_results_sse_handler(
     State(state): State<AppState>,
     Path(poll_id): Path<String>,
 ) -> Result<Sse<impl futures::Stream<Item = Result<Event, Infallible>>>, (StatusCode, String)> {
-    
     // Parse poll_id from String to Uuid
     let poll_uuid = match Uuid::parse_str(&poll_id) {
         Ok(id) => id,
         Err(e) => {
             eprintln!("❌ Invalid poll ID: {}", e);
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "Invalid poll ID".to_string(),
-            ));
+            return Err((StatusCode::BAD_REQUEST, "Invalid poll ID".to_string()));
         }
     };
 
     // Verify poll exists before starting SSE stream
-    if let Err(_) = create_poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
-        return Err((
-            StatusCode::NOT_FOUND,
-            "Poll not found".to_string(),
-        ));
+    if let Err(_) = poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+        return Err((StatusCode::NOT_FOUND, "Poll not found".to_string()));
     }
 
     println!("✅ SSE connection established for poll: {}", poll_uuid);
@@ -63,12 +53,12 @@ pub async fn poll_results_sse_handler(
     // Create manual async stream
     let stream = async_stream::stream! {
         let mut interval_timer = interval(Duration::from_secs(5));  // Increased to 5 seconds
-        
+
         loop {
             interval_timer.tick().await;
-            
+
             // Single optimized query to get poll + options
-            let (poll, options) = match create_poll_helpers::get_poll_with_options(&poll_uuid, &state).await {
+            let (poll, options) = match poll_helpers::get_poll_with_options(&poll_uuid, &state).await {
                 Ok(data) => data,
                 Err(e) => {
                     eprintln!("❌ Error fetching poll data in SSE: {}", e);
@@ -78,21 +68,21 @@ pub async fn poll_results_sse_handler(
 
             // Calculate percentages without iterators
             let mut options_with_percentage: Vec<PollOptionResult> = Vec::new();
-            
+
             for option in options {
                 let percentage = if poll.total_votes > 0 {
                     (option.vote_count as f64 / poll.total_votes as f64) * 100.0
                 } else {
                     0.0
                 };
-                
+
                 let option_result = PollOptionResult {
                     id: option.id,
                     option_text: option.option_text,
                     vote_count: option.vote_count,
                     percentage: (percentage * 100.0).round() / 100.0,
                 };
-                
+
                 options_with_percentage.push(option_result);
             }
 

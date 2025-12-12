@@ -31,12 +31,3 @@ pub struct PollOptionWithPercentage {
     pub option: PollOption,
     pub percentage: f64,
 }
-
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PollWithOptions {
-    #[serde(flatten)]
-    pub poll: Poll,
-    pub options: Vec<PollOptionWithPercentage>,
-    pub user_voted_option_id: Option<Uuid>, // Which option the user voted for (if any)
-}

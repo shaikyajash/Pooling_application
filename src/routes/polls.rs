@@ -5,7 +5,14 @@ use axum::{
 
 use crate::{
     controllers::poll_handlers::{
-        close_poll_handler::close_poll_handler, create_poll_handler::create_poll_handler, get_poll_handler::get_poll, list_polls_handler::list_polls::list_polls, poll_reset_handler::reset_poll_handler, poll_results_sse_handler::poll_results_sse_handler, poll_vote_handler::vote_handler, user_polls::user_polls::user_polls
+        close_poll_handler::close_poll_handler::close_poll_handler,
+        create_poll_handler::create_poll_handler::create_poll_handler,
+        get_stats_of_particular_poll_handler::get_poll_handler::get_poll,
+        list_polls_handler::list_polls::list_polls,
+        particular_user_polls_handler::user_polls::user_polls,
+        poll_reset_handler::poll_reset_handler::reset_poll_handler,
+        poll_results_sse_handler::poll_results_sse_handler::poll_results_sse_handler,
+        poll_vote_handler::poll_vote_handler::vote_handler,
     },
     middleware::authentication_middleware::{optional_authentication, require_authentication},
     models::local_store::AppState,
@@ -14,7 +21,7 @@ use crate::{
 pub fn polls_routes() -> Router<AppState> {
     // Public routes with optional auth
     let public_routes = Router::new()
-    .route("/", get(list_polls))
+        .route("/", get(list_polls))
         .route("/{poll_id}", get(get_poll))
         .route("/{poll_id}/results", get(poll_results_sse_handler))
         .route_layer(middleware::from_fn(optional_authentication));
