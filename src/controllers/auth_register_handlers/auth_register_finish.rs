@@ -1,14 +1,9 @@
 use axum::{Json, extract::State, http::StatusCode};
 
-
-use serde::{Deserialize};
+use serde::Deserialize;
 // 1. Import the prelude - this contains everything needed for the server to function.
 
-use crate::{
-    controllers::auth_helpers,
-    models::{local_store::AppState},
-};
-
+use crate::{controllers::auth_helpers, models::local_store::AppState};
 
 #[derive(Deserialize)]
 pub struct RegisterFinishRequest {
@@ -22,7 +17,7 @@ pub async fn auth_register_finish(
 ) -> Result<StatusCode, (StatusCode, String)> {
     // Validate registration_id
     let registration_id = req.registration_id.trim();
-    
+
     if registration_id.is_empty() {
         eprintln!("❌ Registration ID cannot be empty");
         return Err((
@@ -32,25 +27,25 @@ pub async fn auth_register_finish(
     }
 
     // Retrieve the registration state and username using the registration_id
-    let (registration_state, username) = match state
-        .store
-        .registration_state
-        .get(registration_id)
-        .await
-    {
-        Some(data) => {
-            // Remove from cache after retrieval (one-time use)
-            state.store.registration_state.invalidate(registration_id).await;
-            data
-        }
-        None => {
-            eprintln!("❌ Registration state not found or expired");
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "Registration state not found or expired".to_string(),
-            ));
-        }
-    };
+    let (registration_state, username) =
+        match state.store.registration_state.get(registration_id).await {
+            Some(data) => {
+                // Remove from cache after retrieval (one-time use)
+                state
+                    .store
+                    .registration_state
+                    .invalidate(registration_id)
+                    .await;
+                data
+            }
+            None => {
+                eprintln!("❌ Registration state not found or expired");
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "Registration state not found or expired".to_string(),
+                ));
+            }
+        };
 
     let reg_credential = match serde_json::from_value(req.credential.clone()) {
         Ok(cred) => cred,

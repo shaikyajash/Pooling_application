@@ -2,7 +2,6 @@ use axum::{Json, extract::State, http::StatusCode};
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::controllers::poll_handlers::poll_helpers;
 use crate::models::local_store::AppState;
 
 #[derive(Debug, Serialize)]
@@ -23,8 +22,7 @@ pub struct PollsListResponse {
 pub async fn list_polls(
     State(state): State<AppState>,
 ) -> Result<(StatusCode, Json<PollsListResponse>), (StatusCode, String)> {
-    
-    let polls = match poll_helpers::get_all_polls(&state).await {
+    let polls = match state.db.get_all_polls().await {
         Ok(p) => p,
         Err(e) => {
             eprintln!("❌ Error fetching polls list: {}", e);

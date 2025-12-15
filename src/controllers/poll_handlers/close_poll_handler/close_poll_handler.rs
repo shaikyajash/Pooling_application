@@ -6,10 +6,7 @@ use axum::{
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::{
-    controllers::poll_handlers::poll_helpers,
-    models::{local_store::AppState, polls::Poll},
-};
+use crate::models::{local_store::AppState, polls::Poll};
 
 #[derive(Debug, Serialize)]
 pub struct ClosePollResponse {
@@ -40,8 +37,7 @@ pub async fn close_poll_handler(
         }
     };
 
-    // Check if poll exists
-    let poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let poll = match state.db.get_poll_by_id(&poll_uuid).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Poll not found: {}", e);
@@ -66,22 +62,13 @@ pub async fn close_poll_handler(
     }
 
     // Close the poll
-    if let Err(e) = poll_helpers::close_poll(&poll_uuid, &state).await {
-        eprintln!("❌ Error closing poll: {}", e);
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error closing poll".to_string(),
-        ));
-    }
-
-    // Get updated poll data
-    let updated_poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let updated_poll = match state.db.close_poll(&poll_uuid).await {
         Ok(poll) => poll,
         Err(e) => {
-            eprintln!("❌ Error fetching updated poll: {}", e);
+            eprintln!("❌ Error closing poll: {}", e);
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Error fetching poll data".to_string(),
+                "Error closing poll".to_string(),
             ));
         }
     };

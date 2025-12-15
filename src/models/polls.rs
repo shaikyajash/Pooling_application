@@ -2,9 +2,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-
-
-
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Poll {
     pub id: Uuid,

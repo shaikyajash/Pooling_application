@@ -6,10 +6,7 @@ use axum::{
 use serde::Serialize;
 use sqlx::types::Uuid;
 
-use crate::{
-    controllers::poll_handlers::particular_user_polls_handler::{user_polls_helper},
-    models::local_store::AppState,
-};
+use crate::models::local_store::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct UserPollSummary {
@@ -41,13 +38,13 @@ pub async fn user_polls(
     };
 
     // Fetch polls by user
-    let polls = match user_polls_helper::get_polls_by_user(&user_uuid, &state).await {
-        Ok(p) => p,
+    let polls = match state.db.get_polls_by_user_id(&user_uuid).await {
+        Ok(polls) => polls,
         Err(e) => {
-            eprintln!("❌ Error fetching polls for user {}: {}", user_uuid, e);
+            eprintln!("❌ Error fetching polls: {}", e);
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Error fetching polls".to_string(),
+                "Failed to fetch polls".to_string(),
             ));
         }
     };

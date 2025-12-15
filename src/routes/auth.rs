@@ -7,8 +7,7 @@ use crate::{
             auth_authenticate_start::auth_authenticate_start,
         },
         auth_register_handlers::{
-            auth_register_finish::auth_register_finish,
-            auth_register_start::auth_register_function,
+            auth_register_finish::auth_register_finish, auth_register_start::auth_register_function,
         },
     },
     models::local_store::AppState,

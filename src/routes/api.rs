@@ -1,7 +1,7 @@
 use axum::{Router, middleware, routing::get};
 
 use crate::{
-    controllers::{protected_test::protected_test},
+    controllers::protected_test::protected_test,
     middleware::authentication_middleware::require_authentication, models::local_store::AppState,
 };
 

@@ -1,6 +1,5 @@
 pub mod close_poll_handler;
 pub mod create_poll_handler;
-pub mod poll_helpers;
 pub mod get_stats_of_particular_poll_handler;
 pub mod list_polls_handler;
 pub mod particular_user_polls_handler;

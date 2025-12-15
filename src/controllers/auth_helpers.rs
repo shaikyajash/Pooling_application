@@ -15,7 +15,7 @@ pub async fn check_user_exists(user_name: &str, state: &AppState) -> Result<(), 
         "#,
     )
     .bind(user_name)
-    .fetch_optional(&state.db)
+    .fetch_optional(&state.db.pool)
     .await
     .map_err(|e| {
         eprintln!("Database error checking user: {}", e);
@@ -80,7 +80,7 @@ pub async fn create_user_with_passkey(
             eprintln!("Failed to serialize passkey: {}", e);
             AppError::SerializationError(e.to_string())
         })?)
-        .execute(&state.db)
+        .execute(&state.db.pool)
         .await
         .map_err(|e| {
             eprintln!("Database error creating user with passkey: {}", e);
@@ -102,7 +102,7 @@ pub async fn get_user_passkeys(user_name: &str, state: &AppState) -> Result<Pass
         "#,
     )
     .bind(user_name)
-    .fetch_optional(&state.db)
+    .fetch_optional(&state.db.pool)
     .await
     .map_err(|e| {
         eprintln!("Database error fetching user passkeys: {}", e);
@@ -132,18 +132,13 @@ pub async fn get_user_passkeys(user_name: &str, state: &AppState) -> Result<Pass
     }
 }
 
-
-
-
 pub async fn update_passkey_counter(
     user_name: &str,
-    auth_result:  &AuthenticationResult,
+    auth_result: &AuthenticationResult,
     state: &AppState,
 ) -> Result<(Uuid, String), AppError> {
-
-    // lets get the pass by using the upper helper function 
+    // lets get the pass by using the upper helper function
     let mut passkey = get_user_passkeys(user_name, state).await?;
-
 
     //lets update  the passkey counter now
     passkey.update_credential(auth_result);
@@ -164,14 +159,16 @@ pub async fn update_passkey_counter(
         updated_passkey_binary,
         user_name
     )
-    .fetch_one(&state.db)
+    .fetch_one(&state.db.pool)
     .await
     .map_err(|e| {
         eprintln!("Database error updating passkey counter: {}", e);
         AppError::DatabaseError(e.to_string())
     })?;
-    
-    println!("Updated passkey counter for user: {} (ID: {})", user.username, user.id);
-    Ok((user.id, user.username))
 
+    println!(
+        "Updated passkey counter for user: {} (ID: {})",
+        user.username, user.id
+    );
+    Ok((user.id, user.username))
 }

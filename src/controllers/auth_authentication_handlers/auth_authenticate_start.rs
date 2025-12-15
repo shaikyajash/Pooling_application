@@ -24,7 +24,7 @@ pub async fn auth_authenticate_start(
 ) -> Result<Json<AuthenticateStartResponse>, (StatusCode, String)> {
     // Validate username
     let user_name = req.username.trim();
-    
+
     if user_name.is_empty() {
         eprintln!("❌ Username cannot be empty");
         return Err((
@@ -38,7 +38,7 @@ pub async fn auth_authenticate_start(
     // Get user's passkey from DB
     let passkey = match auth_helpers::get_user_passkeys(&user_name, &state).await {
         Ok(p) => p,
-        
+
         Err(e) => {
             eprintln!("Error retrieving passkey for user {}: {}", user_name, e);
             return match e {
@@ -47,7 +47,7 @@ pub async fn auth_authenticate_start(
                 _ => Err((e.status_code(), e.message())),
             };
         }
-    }; 
+    };
 
     // Start passkey authentication
     let (challenge_response, auth_state) =
@@ -88,9 +88,4 @@ pub async fn auth_authenticate_start(
         authentication_id: auth_id,
         public_key_options,
     }))
-
-
 }
-
-
-

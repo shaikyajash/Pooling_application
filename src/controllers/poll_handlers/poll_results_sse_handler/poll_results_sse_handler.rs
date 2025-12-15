@@ -11,7 +11,7 @@ use sqlx::types::Uuid;
 use std::convert::Infallible;
 use tokio::time::{Duration, interval};
 
-use crate::{controllers::poll_handlers::poll_helpers, models::local_store::AppState};
+use crate::models::local_store::AppState;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct PollOptionResult {
@@ -44,9 +44,13 @@ pub async fn poll_results_sse_handler(
     };
 
     // Verify poll exists before starting SSE stream
-    if let Err(_) = poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
-        return Err((StatusCode::NOT_FOUND, "Poll not found".to_string()));
-    }
+    match state.db.get_poll_by_id(&poll_uuid).await {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("❌ Poll not found: {}", e);
+            return Err((StatusCode::NOT_FOUND, "Poll not found".to_string()));
+        }
+    };
 
     println!("✅ SSE connection established for poll: {}", poll_uuid);
 
@@ -58,7 +62,7 @@ pub async fn poll_results_sse_handler(
             interval_timer.tick().await;
 
             // Single optimized query to get poll + options
-            let (poll, options) = match poll_helpers::get_poll_with_options(&poll_uuid, &state).await {
+            let (poll, options) = match state.db.get_poll_with_options(&poll_uuid).await {
                 Ok(data) => data,
                 Err(e) => {
                     eprintln!("❌ Error fetching poll data in SSE: {}", e);
@@ -66,7 +70,7 @@ pub async fn poll_results_sse_handler(
                 }
             };
 
-            // Calculate percentages without iterators
+            // Calculate percentages
             let mut options_with_percentage: Vec<PollOptionResult> = Vec::new();
 
             for option in options {

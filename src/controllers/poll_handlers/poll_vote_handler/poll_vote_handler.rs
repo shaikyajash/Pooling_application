@@ -6,10 +6,10 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-use crate::{controllers::poll_handlers::{ poll_helpers}, models::{
+use crate::models::{
     local_store::AppState,
     polls::{Poll, PollOption},
-}};
+};
 
 #[derive(Debug, Deserialize)]
 pub struct VoteRequest {
@@ -29,9 +29,6 @@ pub async fn vote_handler(
     Extension(user_id): Extension<String>,
     Json(payload): Json<VoteRequest>,
 ) -> Result<(StatusCode, Json<VoteResponse>), (StatusCode, String)> {
-
-
-
     // Parse poll_id from String to Uuid
     let poll_uuid = match Uuid::parse_str(&poll_id) {
         Ok(id) => id,
@@ -46,10 +43,7 @@ pub async fn vote_handler(
         Ok(id) => id,
         Err(e) => {
             eprintln!("❌ Invalid user ID: {}", e);
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "Invalid user ID".to_string(),
-            ));
+            return Err((StatusCode::BAD_REQUEST, "Invalid user ID".to_string()));
         }
     };
 
@@ -58,36 +52,25 @@ pub async fn vote_handler(
         Ok(id) => id,
         Err(e) => {
             eprintln!("❌ Invalid option ID: {}", e);
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "Invalid option ID".to_string(),
-            ));
+            return Err((StatusCode::BAD_REQUEST, "Invalid option ID".to_string()));
         }
     };
 
-
     // Check if poll exists
-    let poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let poll = match state.db.get_poll_by_id(&poll_uuid).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Poll not found: {}", e);
-            return Err((
-                StatusCode::NOT_FOUND,
-                "Poll not found".to_string(),
-            ));
+            return Err((StatusCode::NOT_FOUND, "Poll not found".to_string()));
         }
     };
 
-
     // Check if poll is closed
     if poll.is_closed {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Poll is closed".to_string(),
-        ));
+        return Err((StatusCode::BAD_REQUEST, "Poll is closed".to_string()));
     }
 
-    match poll_helpers::get_user_vote(&poll_uuid, &user_uuid, &state).await {
+    match state.db.get_user_vote(&poll_uuid, &user_uuid).await {
         Ok(Some(_)) => {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -97,6 +80,7 @@ pub async fn vote_handler(
         Ok(None) => {
             // User hasn't voted, proceed
         }
+
         Err(e) => {
             eprintln!("❌ Error checking user vote: {}", e);
             return Err((
@@ -106,10 +90,12 @@ pub async fn vote_handler(
         }
     }
 
-
-
-  // Cast the vote and get the voted option
-    let voted_option = match poll_helpers::cast_vote(&poll_uuid, &user_uuid, &option_uuid, &state).await {
+    // Cast the vote and get the voted option
+    let voted_option = match state
+        .db
+        .cast_vote(&poll_uuid, &user_uuid, &option_uuid)
+        .await
+    {
         Ok(option) => option,
         Err(e) => {
             eprintln!("❌ Error casting vote: {}", e);
@@ -120,11 +106,8 @@ pub async fn vote_handler(
         }
     };
 
-
-
-
     // Get updated poll data
-    let updated_poll = match poll_helpers::get_poll_by_id(&poll_uuid, &state).await {
+    let updated_poll = match state.db.get_poll_by_id(&poll_uuid).await {
         Ok(poll) => poll,
         Err(e) => {
             eprintln!("❌ Error fetching updated poll: {}", e);
@@ -135,10 +118,10 @@ pub async fn vote_handler(
         }
     };
 
-
-
-
-    println!("✅ Vote cast successfully by user {} on poll '{}'", user_uuid, updated_poll.title);
+    println!(
+        "✅ Vote cast successfully by user {} on poll '{}'",
+        user_uuid, updated_poll.title
+    );
 
     Ok((
         StatusCode::CREATED,
@@ -148,6 +131,4 @@ pub async fn vote_handler(
             voted_option,
         }),
     ))
-
-
 }

@@ -2,12 +2,9 @@ use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-use crate::{
-    controllers::poll_handlers::create_poll_handler::create_poll_helpers,
-    models::{
-        local_store::AppState,
-        polls::{Poll, PollOption},
-    },
+use crate::models::{
+    local_store::AppState,
+    polls::{Poll, PollOption},
 };
 
 #[derive(Debug, Deserialize)]
@@ -45,23 +42,14 @@ pub async fn create_poll_handler(
     ///////////////////finished with validating now let's insert the poll into the database
     //// using transactions so lets start transaction
 
-    let mut tx = match state.db.begin().await {
-        Ok(tx) => tx,
-        Err(e) => {
-            eprintln!("❌ Error starting transaction: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error".to_string(),
-            ));
-        }
-    };
-
-    // Insert the poll using helper
     let poll_id = Uuid::new_v4();
-    let poll = match create_poll_helpers::insert_poll(&mut tx, poll_id, &payload.title, creator_id)
+
+    let (poll, options) = match state
+        .db
+        .insert_poll_with_options(poll_id, &payload.title, creator_id, &payload.options)
         .await
     {
-        Ok(poll) => poll,
+        Ok(p) => p,
         Err(e) => {
             eprintln!("❌ Error creating poll: {}", e);
             return Err((
@@ -70,28 +58,6 @@ pub async fn create_poll_handler(
             ));
         }
     };
-
-    // Insert poll options using helper
-    let options =
-        match create_poll_helpers::insert_poll_options(&mut tx, poll_id, &payload.options).await {
-            Ok(options) => options,
-            Err(e) => {
-                eprintln!("❌ Error creating poll options: {}", e);
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Error creating poll options".to_string(),
-                ));
-            }
-        };
-
-    // Commit transaction
-    if let Err(e) = tx.commit().await {
-        eprintln!("❌ Error committing transaction: {}", e);
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error saving poll".to_string(),
-        ));
-    }
 
     println!(
         "✅ Poll '{}' created successfully by user {}",

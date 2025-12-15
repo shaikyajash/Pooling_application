@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 use std::fmt;
@@ -21,7 +21,6 @@ impl fmt::Display for AppError {
 }
 
 impl AppError {
-    
     pub fn status_code(&self) -> StatusCode {
         match self {
             AppError::UserNotFound => StatusCode::NOT_FOUND,
@@ -33,12 +32,8 @@ impl AppError {
 
     pub fn message(&self) -> String {
         match self {
-            AppError::UserNotFound => {
-                "User not found".to_string()
-            }
-            AppError::UserAlreadyHasPasskey => {
-                "User already has a passkey registered".to_string()
-            }
+            AppError::UserNotFound => "User not found".to_string(),
+            AppError::UserAlreadyHasPasskey => "User already has a passkey registered".to_string(),
             AppError::DatabaseError(msg) => format!("Database error: {}", msg),
             AppError::SerializationError(msg) => format!("Serialization error: {}", msg),
         }

@@ -1,3 +1,4 @@
+mod config;
 mod controllers;
 mod middleware;
 mod models;
@@ -13,7 +14,7 @@ use webauthn_rs::WebauthnBuilder;
 use crate::{
     models::local_store::AppState,
     routes::{auth::auth_routes, health::health_check_routes, polls::polls_routes},
-    utils::{connect_to_db::connect_to_db, setup_tables::make_tables_if_not_exists},
+    utils::{db_helpers::Database, setup_tables::make_tables_if_not_exists},
 };
 
 #[tokio::main]
@@ -25,9 +26,6 @@ async fn main() {
     }
 
     //Server initializing Code below
-
-    // let rp_id = "localhost";
-    // let origin = Url::parse("http://localhost:3000").expect("Failed to parse origin");
 
     // Read RP_ID and ORIGIN from environment (fallback to sensible defaults)
     let rp_id = match std::env::var("RP_ID") {
@@ -69,22 +67,21 @@ async fn main() {
     };
 
     //Connecting to the database
-    println!("Connecting to the database...");
-    let db_pool = match connect_to_db().await {
-        Ok(pool) => pool,
+    let db = match Database::new().await {
+        Ok(db) => db,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
             return;
         }
     };
 
-    if let Err(e) = make_tables_if_not_exists(&db_pool).await {
+    if let Err(e) = make_tables_if_not_exists(&db.pool).await {
         eprintln!("Error setting up database tables: {}", e);
         return;
     }
 
     // creating application state with webauth instance
-    let app_state = AppState::new(webauth, rp_id.to_string(), db_pool);
+    let app_state = AppState::new(webauth, rp_id.to_string(), db);
 
     //setting up cors
     let cors = CorsLayer::new()

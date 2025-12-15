@@ -1,9 +1,10 @@
+use moka::future::Cache;
 use std::sync::Arc;
 use std::time::Duration;
-use sqlx::PgPool;
 use webauthn_rs::prelude::*;
-use moka::future::Cache;
 
+use crate::config::{MAX_CAPACITY, TTL};
+use crate::utils::db_helpers::Database;
 
 pub type RegistrationStateCache = Cache<String, (PasskeyRegistration, String)>;
 pub type AuthenticationStateCache = Cache<String, (PasskeyAuthentication, String)>;
@@ -20,31 +21,30 @@ impl InMemoryStore {
         Self {
             // Auto-expires after 5 minutes, max 10k concurrent registrations
             registration_state: Cache::builder()
-                .max_capacity(10_000)
-                .time_to_live(Duration::from_secs(300)) // 5 minutes
+                .max_capacity(MAX_CAPACITY)
+                .time_to_live(Duration::from_secs(TTL)) // 5 minutes
                 .build(),
-            
+
             // Auto-expires after 5 minutes, max 10k concurrent authentications
             authentication_states: Cache::builder()
-                .max_capacity(10_000)
-                .time_to_live(Duration::from_secs(300)) // 5 minutes
+                .max_capacity(MAX_CAPACITY)
+                .time_to_live(Duration::from_secs(TTL)) // 5 minutes
                 .build(),
         }
     }
 }
 
-// ///////////////////////////////////
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct AppState {
     pub webauth: Arc<Webauthn>,
     pub store: InMemoryStore,
     pub rp_id: String,
-    pub db: PgPool,
+    pub db: Database,
 }
 
 impl AppState {
-    pub fn new(webauth: Webauthn, rp_id: String, db: PgPool) -> Self {
+    pub fn new(webauth: Webauthn, rp_id: String, db: Database) -> Self {
         Self {
             webauth: Arc::new(webauth),
             store: InMemoryStore::new(),

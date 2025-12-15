@@ -68,7 +68,7 @@ pub async fn auth_register_function(
 ) -> Result<Json<RegisterStartResponse>, (StatusCode, String)> {
     // Validate username
     let user_name = req.username.trim();
-    
+
     if user_name.is_empty() {
         eprintln!("❌ Username cannot be empty");
         return Err((
@@ -76,7 +76,7 @@ pub async fn auth_register_function(
             "Username cannot be empty".to_string(),
         ));
     }
-    
+
     if user_name.len() < 3 {
         eprintln!("❌ Username too short: {}", user_name);
         return Err((
@@ -84,7 +84,7 @@ pub async fn auth_register_function(
             "Username must be at least 3 characters".to_string(),
         ));
     }
-    
+
     if user_name.len() > 50 {
         eprintln!("❌ Username too long: {}", user_name);
         return Err((
@@ -95,9 +95,9 @@ pub async fn auth_register_function(
 
     let user_name = user_name.to_string();
 
-    let display_name = match &req.display_name{
-        Some(name)=>name.clone(),
-        None=>user_name.clone(),
+    let display_name = match &req.display_name {
+        Some(name) => name.clone(),
+        None => user_name.clone(),
     };
 
     // Check if user already exists with a passkey
@@ -106,7 +106,7 @@ pub async fn auth_register_function(
 
         // Match on AppError enum
         return match e {
-            AppError::UserAlreadyHasPasskey => Err((StatusCode::CONFLICT,e.message())),
+            AppError::UserAlreadyHasPasskey => Err((StatusCode::CONFLICT, e.message())),
 
             // Handle all other errors (DatabaseError, SerializationError, etc.)
             _ => Err((e.status_code(), e.message())),
@@ -122,7 +122,7 @@ pub async fn auth_register_function(
             temp_user_id,
             &user_name,
             &display_name, // Use actual display_name instead of username
-            None,       // No exclude_credentials needed (1 user = 1 passkey)
+            None,          // No exclude_credentials needed (1 user = 1 passkey)
         ) {
             Ok(result) => result,
             Err(e) => {
@@ -162,6 +162,3 @@ pub async fn auth_register_function(
         public_key_options,
     }))
 }
-
-
-

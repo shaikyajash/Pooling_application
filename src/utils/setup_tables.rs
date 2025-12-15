@@ -1,6 +1,4 @@
-
-
-pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Error>{
+pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     // Create users table - 1 username -> 1 passkey (simplified)
     sqlx::query(
         r#"
@@ -11,12 +9,12 @@ pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Er
             passkey BYTEA,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
-        "#
+        "#,
     )
     .execute(pool)
     .await?;
 
-      // Create polls table
+    // Create polls table
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS polls (
@@ -28,11 +26,10 @@ pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Er
             closed_at TIMESTAMP WITH TIME ZONE,
             total_votes INTEGER DEFAULT 0
         )
-        "#
+        "#,
     )
     .execute(pool)
     .await?;
-
 
     // Create poll_options table
     sqlx::query(
@@ -45,13 +42,12 @@ pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Er
             display_order INTEGER NOT NULL,
             UNIQUE(poll_id, option_text)
         )
-        "#
+        "#,
     )
     .execute(pool)
     .await?;
 
-
-// Create votes table (to track who voted on what)
+    // Create votes table (to track who voted on what)
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS votes (
@@ -62,14 +58,10 @@ pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Er
             voted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(poll_id, user_id)
         )
-        "#
+        "#,
     )
     .execute(pool)
     .await?;
-
-
-
-
 
     // Create indexes for better query performance
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_polls_creator ON polls(creator_id)")
@@ -87,10 +79,6 @@ pub async fn make_tables_if_not_exists(pool: &sqlx::PgPool)->Result<(), sqlx::Er
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_votes_user ON votes(user_id)")
         .execute(pool)
         .await?;
-
-
-
-
 
     println!("✅ Database tables setup complete");
     Ok(())
