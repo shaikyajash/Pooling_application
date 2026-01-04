@@ -22,7 +22,7 @@
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/pooling-application",
-          "awslogs-region": "us-east-1",
+          "awslogs-region": "eu-north-1",
           "awslogs-stream-prefix": "ecs"
         }
       }
