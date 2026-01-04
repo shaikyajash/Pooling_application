@@ -90,7 +90,7 @@ jobs:
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          image: ${{ env.DOCKER_IMAGE }}:latest
           environment-variables: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
 
