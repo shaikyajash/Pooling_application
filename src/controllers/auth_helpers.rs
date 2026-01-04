@@ -149,16 +149,16 @@ pub async fn update_passkey_counter(
         AppError::SerializationError(e.to_string())
     })?;
 
-    let user = sqlx::query!(
+    let row = sqlx::query(
         r#"
         UPDATE users
         SET passkey = $1
         WHERE username = $2
         RETURNING id, username
         "#,
-        updated_passkey_binary,
-        user_name
     )
+    .bind(&updated_passkey_binary)
+    .bind(user_name)
     .fetch_one(&state.db.pool)
     .await
     .map_err(|e| {
@@ -166,9 +166,19 @@ pub async fn update_passkey_counter(
         AppError::DatabaseError(e.to_string())
     })?;
 
+    let user_id: Uuid = row.try_get("id").map_err(|e| {
+        eprintln!("Error extracting user id: {}", e);
+        AppError::DatabaseError(e.to_string())
+    })?;
+
+    let username: String = row.try_get("username").map_err(|e| {
+        eprintln!("Error extracting username: {}", e);
+        AppError::DatabaseError(e.to_string())
+    })?;
+
     println!(
         "Updated passkey counter for user: {} (ID: {})",
-        user.username, user.id
+        username, user_id
     );
-    Ok((user.id, user.username))
+    Ok((user_id, username))
 }
