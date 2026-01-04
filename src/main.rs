@@ -97,7 +97,7 @@ async fn main() {
         .with_state(app_state)
         .layer(cors);
 
-    let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
+    let listener = match tokio::net::TcpListener::bind("0.0.0.0:3000").await {
         Ok(l) => l,
         Err(e) => {
             eprintln!("Failed to bind to address to Tcp Listener: {}", e);
@@ -105,7 +105,7 @@ async fn main() {
         }
     };
 
-    println!("Server running on http://localhost:8080");
+    println!("Server running on http://localhost:3000");
 
     match axum::serve(listener, app).await {
         Ok(_) => (),
