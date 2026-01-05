@@ -3,8 +3,8 @@
 # ============================================
 FROM rust:alpine AS builder
 
-# Install build dependencies including OpenSSL
-RUN apk add --no-cache musl-dev pkgconfig openssl-dev openssl-libs-static
+# Install build dependencies including OpenSSL and CA Certs (for copying later)
+RUN apk add --no-cache musl-dev pkgconfig openssl-dev openssl-libs-static ca-certificates
 
 # Create a new empty project for dependency caching
 WORKDIR /app
@@ -32,12 +32,12 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 RUN strip target/x86_64-unknown-linux-musl/release/Pooling_application
 
 # ============================================
-# STAGE 2: Runtime Stage (Minimal Alpine)
+# STAGE 2: Runtime Stage (Scratch)
 # ============================================
-FROM alpine:latest
+FROM scratch
 
-# Install CA certificates for HTTPS connections
-RUN apk add --no-cache ca-certificates
+# Copy CA certificates for HTTPS connections (from builder)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the statically linked binary
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/Pooling_application /app
