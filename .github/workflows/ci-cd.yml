@@ -93,6 +93,8 @@ jobs:
           image: ${{ env.DOCKER_IMAGE }}:latest
           environment-variables: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
+            RP_ID=polling-frontend-mu.vercel.app
+            ORIGIN=https://polling-frontend-mu.vercel.app
 
       # Step 4: Deploy to ECS
       - name: Deploy Amazon ECS task definition
@@ -102,3 +104,22 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      # Step 5: Notify Discord
+      - name: Discord Notification
+        if: always()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: "🚀 **Deployment Update**"
+          title: "ECS Deployment: ${{ job.status }}"
+          description: |
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Status:** ${{ job.status }}
+          color: 0x5865F2
+          url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          username: AWS ECS Bot
+          avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
