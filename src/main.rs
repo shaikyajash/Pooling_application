@@ -100,7 +100,7 @@ async fn main() {
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:3000").await {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("Failed to bind to address to Tcp Listener: {}", e);
+            eprintln!("Failed to bind to address to Tcp Listenerr: {}", e);
             return;
         }
     };
